@@ -136,7 +136,7 @@ def main():
 
     try:
         print(f"Initiating transfer of {scan_to_transfer} to {pet_dir}")
-        subprocess.run(["rsync", "-rvzP", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
+        subprocess.run(["rsync", "-rz", "--info=progress2", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
     except Exception as e:
         print(f"Error occurred: {e}")
 
