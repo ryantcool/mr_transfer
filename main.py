@@ -2,7 +2,7 @@
 
 import os
 import subprocess
-from sys import exit
+import sys
 from pathlib import Path
 from paramiko import SSHClient, AuthenticationException
 from getpass import getpass
@@ -53,10 +53,10 @@ def ssh_connect(host, usr, pswd):
         client.connect(hostname=host, username=usr, password=pswd, timeout=2)
     except AuthenticationException:
         print("Authentication failed. Please check your credentials.")
-        exit(1)
+        sys.exit(1)
     except Exception as e:
         print(f"Connection error: {e}")
-        exit(1)
+        sys.exit(1)
     return client
 
 
@@ -84,7 +84,7 @@ def main():
 
         if not scans_list:
             print(f"No scans found for {pi} on {scanner}")
-            exit(1)
+            sys.exit(1)
 
         print("Enter the number of the scan you'd like to transfer:")
         for i, scan in enumerate(scans_list, start=0):
@@ -95,14 +95,14 @@ def main():
         mr_date = scan_to_transfer.split("_")[1]
     except Exception as e:
         print(f"Error occurred: {e}")
-        exit(1)
+        sys.exit(1)
 
     try:
         cmd = f'readlink -f /data1/{scanner}_transfer/{scan_to_transfer}'
         mr_file_path = ssh_command(client, cmd)[0].rstrip()
     except Exception as e:
         print(f"Error occurred: {e}")
-        exit(1)
+        sys.exit(1)
 
     client.close()
 
@@ -122,7 +122,7 @@ def main():
                     break
                 else:
                     print("Not continuing")
-                    exit(0)
+                    sys.exit(0)
         else:
             try:
                 if ask_confirmation(f"You entered {pet_dir}, is this correct? (y/n) "):
@@ -132,11 +132,11 @@ def main():
                     continue
             except Exception as e:
                 print(f"Error occurred: {e}")
-                exit(1)
+                sys.exit(1)
 
     try:
         print(f"Initiating transfer of {scan_to_transfer} to {pet_dir}")
-        subprocess.run(["rsync", "-rz", "--info=progress2", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
+        subprocess.run(["rsync", "-aW", "--info=progress2", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
     except Exception as e:
         print(f"Error occurred: {e}")
 
