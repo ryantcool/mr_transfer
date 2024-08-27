@@ -6,8 +6,8 @@ services:
       dockerfile: Dockerfile
     container_name: tauruspet-mirror
     restart: unless-stopped
+    stdin_open: true
     tty: true
     command: ["/bin/bash"]
     volumes:
       - ~/src/LVG/work/mr_transfer:/home/pydev/mr_transfer
-    network-mode: "host"
