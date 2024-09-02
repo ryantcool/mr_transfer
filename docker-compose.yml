@@ -10,4 +10,4 @@ services:
     tty: true
     command: ["/bin/bash"]
     volumes:
-      - ~/src/LVG/work/mr_transfer:/home/pydev/mr_transfer
+      - /home/loadedvegangoat/src/LVG/work/mr_transfer:/home/pydev/mr_transfer
