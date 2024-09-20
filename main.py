@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.11
+#!/usr/bin/env python3
 
 import os
 import subprocess
@@ -6,6 +6,37 @@ import sys
 from pathlib import Path
 from paramiko import SSHClient, AuthenticationException
 from getpass import getpass
+import json
+
+# Path to the JSON configuration file
+config_path = '/home1/rtc29/.petlab.json'
+
+def load_config():
+    if not os.path.isfile(config_path):
+        print(f"Configuration file not found: {config_path}")
+        return None
+    with open(config_path, 'r') as file:
+        config = json.load(file)
+    return config
+
+# Set dictionary with last name of PI's and their studies
+# Scans are categorized on MR server by PI last name
+pi_dict = {
+    "cosgrove": ["bava_ptsd_aud", "fmozat_dex", "mukappa_aud", "pbr_app311_aud", "pbr_oud"],
+    "davis": ["ekap_ptsd", "fpeb_bpd", "pbr_ed"],
+    "esterlis": ["app311_fpeb", "app311_ket", "fpeb_abp_mdd" "sdm8_sdc", "sv2a_aging_mdd"],
+    "zakiniaeiz": ["flb_aud"]
+    }
+
+def pi_study_match(study):
+    if not isinstance(study, str):
+        raise ValueError("Study name must be a string")
+    for pi_name, study_name in pi_dict.items():
+        if study in study_name:
+            return pi_name, study
+    # Only runs if no study is found in pi_dict values
+    print(f"No matching PI found for the study: {study}")
+    sys.exit(1)
 
 
 def ask_confirmation(prompt, input_method=input, negative_action=None, negative_message=""):
@@ -35,7 +66,7 @@ def ask_confirmation(prompt, input_method=input, negative_action=None, negative_
 
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
+    # Get absolute path to resource, works for dev and for PyInstaller
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
@@ -70,12 +101,20 @@ def ssh_command(client, cmd):
 
 
 def main():
-    # MRRC Connect
-    pi = input("Enter PI's last name: ").lower()
-    scanner = input("Enter Scanner: ").lower().replace(" ", "")
+    subject = input("Please enter subject PET ID: ")
+    study_input = input("Please enter study name: ")
+    try:
+        pi, study = pi_study_match(study_input)
+    except ValueError as e:
+        print(e)
+    scanner = input("Please enter MR Scanner: ").lower().replace(" ", "")
     mrrc_server = "shred.med.yale.edu"
     m_user = "petlab"
-    m_pswd = getpass("Please enter petlab password: ")
+    config = load_config()
+    if config is None:
+        m_pswd = getpass("Please enter petlab password: ")
+    else:
+        m_pswd = config.get('petlab_password')
     client = ssh_connect(mrrc_server, m_user, m_pswd)
 
     try:
@@ -85,7 +124,7 @@ def main():
         if not scans_list:
             print(f"No scans found for {pi} on {scanner}")
             sys.exit(1)
-
+        print(f"Found these scans for PI: {pi}")
         print("Enter the number of the scan you'd like to transfer:")
         for i, scan in enumerate(scans_list, start=0):
             print(f"{i} ---> {scan.split()[0]} | {scan.split()[4]}")
@@ -108,12 +147,10 @@ def main():
 
     # Pet Connect
     while True:
-        study = input('Please enter name of PET study: ')
         if not study.endswith("_mr"):
             study = (f"{study}_mr")
         else:
             pass
-        subject = input('Please enter subject PET ID: ')
         pet_dir = Path(f"/data8/data/{study}/{mr_date}_{subject}/3d_dicom")
         if pet_dir.exists():
             file_count = len(list(pet_dir.glob("[MS]R*")))
@@ -124,16 +161,18 @@ def main():
                     print("Not continuing")
                     sys.exit(0)
         else:
-            try:
-                if ask_confirmation(f"You entered {pet_dir}, is this correct? (y/n) "):
+            if ask_confirmation(f"Transfer location is set to: {pet_dir}, is this correct? (y/n) "):
+                try:
                     pet_dir.mkdir(parents=True, exist_ok=True)
                     break
-                else:
-                    continue
-            except Exception as e:
-                print(f"Error occurred: {e}")
-                sys.exit(1)
-
+                except Exception as e:
+                    print(f"Error occurred: {e}")
+                    sys.exit(1)
+            else:
+                # Allow user to change study, mr_date, or subject
+                study = input(f"Please enter the correct study name (current: {study}) or press Enter to keep it: ") or study
+                mr_date = input(f"Please enter the correct MR date (current: {mr_date}) or press Enter to keep it: ") or mr_date
+                subject = input(f"Please enter the correct subject ID (current: {subject}) or press Enter to keep it: ") or subject
     try:
         print(f"Initiating transfer of {scan_to_transfer} to {pet_dir}")
         subprocess.run(["rsync", "-aW", "--info=progress2", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
