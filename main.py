@@ -11,6 +11,7 @@ import json
 # Path to the JSON configuration file
 config_path = '/home1/rtc29/.petlab.json'
 
+
 def load_config():
     if not os.path.isfile(config_path):
         print(f"Configuration file not found: {config_path}")
@@ -18,6 +19,7 @@ def load_config():
     with open(config_path, 'r') as file:
         config = json.load(file)
     return config
+
 
 # Set dictionary with last name of PI's and their studies
 # Scans are categorized on MR server by PI last name
@@ -27,6 +29,7 @@ pi_dict = {
     "esterlis": ["app311_fpeb", "app311_ket", "fpeb_abp_mdd" "sdm8_sdc", "sv2a_aging_mdd"],
     "zakiniaeiz": ["flb_aud"]
     }
+
 
 def pi_study_match(study):
     if not isinstance(study, str):
