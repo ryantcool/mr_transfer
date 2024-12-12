@@ -23,6 +23,12 @@ RUN chown -R pydev:pydev /home/pydev
 # Create dir for mounted folder
 RUN mkdir /home/pydev/mr_transfer
 
+# Create dir where data is stored on actual pet server
+RUN mkdir -p /data8/data/
+
+# Change ownership to "pydev"
+RUN chown -R pydev:pydev /data8/data
+
 # Switch to the non-root user
 USER pydev
 
