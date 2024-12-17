@@ -5,6 +5,7 @@ RUN dnf update -y && \
     dnf install -y \
     vim \
     git \
+    rsync \
     python3.11
 
 # Set the timezone to New York
