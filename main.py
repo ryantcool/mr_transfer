@@ -10,7 +10,7 @@ from pathlib import Path
 from paramiko import AuthenticationException, SSHClient
 
 # Path to the JSON configuration file containing credentials
-config_path = '/home1/rtc29/.petlab.json'
+config_path = "/home1/rtc29/.petlab.json"
 
 
 def load_config():
@@ -23,7 +23,7 @@ def load_config():
     if not os.path.isfile(config_path):  # Check if the config file exists
         print(f"Configuration file not found: {config_path}")
         return None
-    with open(config_path, 'r') as file:
+    with open(config_path, "r") as file:
         config = json.load(file)  # Parse JSON config
     return config
 
@@ -31,11 +31,23 @@ def load_config():
 # Set dictionary with last name of PI's (Principal Investigators) and their associated studies.
 # Scans are categorized on MR server by PI last name.
 pi_dict = {
-    "cosgrove": ["bava_ptsd_aud", "fmozat_dex", "mukappa_aud", "pbr_app311_aud", "pbr_oud"],
+    "cosgrove": [
+        "bava_ptsd_aud",
+        "fmozat_dex",
+        "mukappa_aud",
+        "pbr_app311_aud",
+        "pbr_oud",
+    ],
     "davis": ["ekap_ptsd", "fpeb_bpd", "pbr_ed"],
-    "esterlis": ["app311_fpeb", "app311_ket", "fpeb_abp_mdd", "sdm8_sdc", "sv2a_aging_mdd"],
-    "zakiniaeiz": ["flb_aud"]
-    }
+    "esterlis": [
+        "app311_fpeb",
+        "app311_ket",
+        "fpeb_abp_mdd",
+        "sdm8_sdc",
+        "sv2a_aging_mdd",
+    ],
+    "zakiniaeiz": ["flb_aud"],
+}
 
 
 def pi_study_match(study):
@@ -59,13 +71,15 @@ def pi_study_match(study):
     # Look for the study in the dictionary and return the associated PI name
     for pi_name, study_name in pi_dict.items():
         if study in study_name:
-             return pi_name, study
+            return pi_name, study
     # If no match is found, print error and exit
     print(f"No matching PI found for the study: {study}")
     sys.exit(1)
 
 
-def ask_confirmation(prompt, input_method=input, negative_action=None, negative_message=""):
+def ask_confirmation(
+    prompt, input_method=input, negative_action=None, negative_message=""
+):
     """
     Ask for user confirmation with a given prompt.
 
@@ -78,9 +92,13 @@ def ask_confirmation(prompt, input_method=input, negative_action=None, negative_
     Returns:
         bool: True if the user confirms, False otherwise.
     """
-    choice = input_method(prompt).lower()  # Get user input and normalize to lowercase
+    choice = input_method(
+        prompt
+    ).lower()  # Get user input and normalize to lowercase
     while choice not in ("y", "n"):  # Keep asking if invalid input is provided
-        choice = input_method(f"You typed: {choice}, please enter only y or n: ")
+        choice = input_method(
+            f"You typed: {choice}, please enter only y or n: "
+        )
     if choice == "y":
         return True
     elif choice == "n":
@@ -105,7 +123,9 @@ def resource_path(relative_path):
         # PyInstaller sets the path to the bundled files in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-        base_path = os.path.abspath(".")  # Default to current working directory if not using PyInstaller
+        base_path = os.path.abspath(
+            "."
+        )  # Default to current working directory if not using PyInstaller
     return os.path.join(base_path, relative_path)
 
 
@@ -162,7 +182,10 @@ def ssh_command(client, cmd):
 
         # If there is any error output, print it to stderr
         if stderr_output:
-            print(f"Error occurred during execution:\n{''.join(stderr_output)}", file=sys.stderr)
+            print(
+                f"Error occurred during execution:\n{''.join(stderr_output)}",
+                file=sys.stderr,
+            )
 
         return stdout_output  # Return the standard output
     except Exception as e:
@@ -197,11 +220,17 @@ def main():
     # Load configuration settings, such as petlab password
     config = load_config()
     if config is None:
-        m_pswd = getpass("Please enter petlab password: ")  # Prompt for password if config is not found
+        m_pswd = getpass(
+            "Please enter petlab password: "
+        )  # Prompt for password if config is not found
     else:
-        m_pswd = config.get('petlab_password')  # Retrieve password from config file
+        m_pswd = config.get(
+            "petlab_password"
+        )  # Retrieve password from config file
 
-    client = ssh_connect(mrrc_server, m_user, m_pswd)  # Establish SSH connection
+    client = ssh_connect(
+        mrrc_server, m_user, m_pswd
+    )  # Establish SSH connection
 
     try:
         # Search for scans related to the PI and scanner
@@ -228,7 +257,7 @@ def main():
 
     try:
         # Get the full file path of the selected scan
-        cmd = f'readlink -f /data1/{scanner}_transfer/{scan_to_transfer}'
+        cmd = f"readlink -f /data1/{scanner}_transfer/{scan_to_transfer}"
         mr_file_path = ssh_command(client, cmd)[0].rstrip()
     except Exception as e:
         print(f"Error occurred: {e}")
@@ -239,33 +268,66 @@ def main():
     # Ensure the destination directory for transfer exists
     while True:
         if not study.endswith("_mr"):
-            study = (f"{study}_mr")
+            study = f"{study}_mr"
         pet_dir = Path(f"/data8/data/{study}/{mr_date}_{subject}/3d_dicom")
         if pet_dir.exists():
-            file_count = len(list(pet_dir.glob("[MS]R*")))  # Check how many MR files exist
+            file_count = len(
+                list(pet_dir.glob("[MS]R*"))
+            )  # Check how many MR files exist
             if file_count > 1:
-                if ask_confirmation(f"{pet_dir} exists and contains {file_count} MR files, would you like to continue anyways? (y/n) "):
+                if ask_confirmation(
+                    f"{pet_dir} exists and contains {file_count} MR files, would you like to continue anyways? (y/n) "
+                ):
                     break
                 else:
                     print("Not continuing")
                     sys.exit(0)
         else:
-            if ask_confirmation(f"Transfer location is set to: {pet_dir}, is this correct? (y/n) "):
+            if ask_confirmation(
+                f"Transfer location is set to: {pet_dir}, is this correct? (y/n) "
+            ):
                 try:
-                    pet_dir.mkdir(parents=True, exist_ok=True)  # Create the directory if it doesn't exist
+                    pet_dir.mkdir(
+                        parents=True, exist_ok=True
+                    )  # Create the directory if it doesn't exist
                     break
                 except Exception as e:
                     print(f"Error occurred: {e}")
                     sys.exit(1)
             else:
                 # Allow user to modify study, MR date, or subject if the location is not correct
-                study = input(f"Please enter the correct study name (current: {study}) or press Enter to keep it: ") or study
-                mr_date = input(f"Please enter the correct MR date (current: {mr_date}) or press Enter to keep it: ") or mr_date
-                subject = input(f"Please enter the correct subject ID (current: {subject}) or press Enter to keep it: ") or subject
+                study = (
+                    input(
+                        f"Please enter the correct study name (current: {study}) or press Enter to keep it: "
+                    )
+                    or study
+                )
+                mr_date = (
+                    input(
+                        f"Please enter the correct MR date (current: {mr_date}) or press Enter to keep it: "
+                    )
+                    or mr_date
+                )
+                subject = (
+                    input(
+                        f"Please enter the correct subject ID (current: {subject}) or press Enter to keep it: "
+                    )
+                    or subject
+                )
     try:
         # Start the transfer using rsync
         print(f"Initiating transfer of {scan_to_transfer} to {pet_dir}")
-        subprocess.run(["rsync", "-aW", "--info=progress2", f"{m_user}@{mrrc_server}:{mr_file_path}/*", str(pet_dir)])
+        subprocess.run(
+            [
+                "rsync",
+                "-aW",
+                "--info=progress2",
+                "-e",
+                "ssh -o HostKeyAlgorithms=ssh-rsa",
+                f"{m_user}@{mrrc_server}:{mr_file_path}/*",
+                str(pet_dir),
+            ]
+        )
     except Exception as e:
         print(f"Error occurred: {e}")
 
