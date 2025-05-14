@@ -1,0 +1,42 @@
+FROM ubuntu:22.04
+
+# Update and Install Vim, Git, and Python
+RUN apt-get update && apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+ENV LANG en_US.utf8
+
+RUN apt-get update && apt-get install -y \
+    vim \
+    git \
+    rsync \
+    python3.10 \
+    python3.10-venv \
+    python3.10-distutils \
+    binutils \
+    curl \
+    ca-certificates
+
+
+# Create a non-root user named pydev
+RUN useradd -m -s /bin/bash pydev
+
+# Set the working directory to the home directory of pydev
+WORKDIR /home/pydev
+
+# Change ownership of the working directory to pydev
+RUN chown -R pydev:pydev /home/pydev
+
+# Create dir for mounted folder
+RUN mkdir /home/pydev/mr_transfer
+
+# Create dir where data is stored on actual pet server
+RUN mkdir -p /data8/data/
+
+# Change ownership to pydev
+RUN chown -R pydev:pydev /data8/data
+
+# Switch to the non-root user
+USER pydev
+
+# Start bash shell by default
+CMD ["/bin/bash"]

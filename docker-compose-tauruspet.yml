@@ -1,0 +1,13 @@
+services:
+  rockylinux:
+    image: rockylinux-pet
+    container_name: tauruspet-mirror
+    build:
+      context: .
+      dockerfile: Dockerfile-taurus
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]
+    volumes:
+      - ./:/home/pydev/mr_transfer

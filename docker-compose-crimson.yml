@@ -1,0 +1,13 @@
+services:
+  ubuntu:
+    image: ubuntu-pet
+    container_name: crimson-mirror
+    build:
+      context: .
+      dockerfile: Dockerfile-crimson
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    command: ["/bin/bash"]
+    volumes:
+      - ./:/home/pydev/mr_transfer
