@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import subprocess
 import sys
-from pathlib import Path
-from paramiko import SSHClient, AuthenticationException
 from getpass import getpass
-import json
+from pathlib import Path
+
+from paramiko import AuthenticationException, SSHClient
 
 # Path to the JSON configuration file containing credentials
 config_path = '/home1/rtc29/.petlab.json'
@@ -58,7 +59,7 @@ def pi_study_match(study):
     # Look for the study in the dictionary and return the associated PI name
     for pi_name, study_name in pi_dict.items():
         if study in study_name:
-            return pi_name, study
+             return pi_name, study
     # If no match is found, print error and exit
     print(f"No matching PI found for the study: {study}")
     sys.exit(1)

@@ -1,5 +1,4 @@
-env
+.env*
 known_hosts
 build
-mr_transfer.spec
-.vscode
+*.spec
