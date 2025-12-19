@@ -1,35 +1,12 @@
 #!/usr/bin/env python3
 
-import json
-import os
 import subprocess
 import sys
 from getpass import getpass
 from pathlib import Path
 
-from paramiko import AuthenticationException, SSHClient
+from paramiko import AuthenticationException, AutoAddPolicy, SSHClient
 
-# Path to the JSON configuration file containing credentials
-config_path = "/home1/rtc29/.petlab.json"
-
-
-def load_config():
-    """
-    Load configuration data from a JSON file.
-
-    Returns:
-        dict: A dictionary containing configuration values, or None if the file is not found.
-    """
-    if not os.path.isfile(config_path):  # Check if the config file exists
-        print(f"Configuration file not found: {config_path}")
-        return None
-    with open(config_path, "r") as file:
-        config = json.load(file)  # Parse JSON config
-    return config
-
-
-# Set dictionary with last name of PI's (Principal Investigators) and their associated studies.
-# Scans are categorized on MR server by PI last name.
 pi_dict = {
     "cosgrove": [
         "bava_ptsd_aud",
@@ -63,6 +40,11 @@ def pi_study_match(study):
     Raises:
         ValueError: If the study name is not found in the dictionary.
     """
+    if study.lower() == "bypass":
+        print("Bypassing pi_dict lookup...")
+        study = input("Manually set study name: ")
+        pi_name = input("Manually enter PI: ")
+        return pi_name, study
     if not isinstance(study, str):
         raise ValueError("Study name must be a string")
     # Remove the "_mr" suffix if it exists, only for this check
@@ -92,13 +74,9 @@ def ask_confirmation(
     Returns:
         bool: True if the user confirms, False otherwise.
     """
-    choice = input_method(
-        prompt
-    ).lower()  # Get user input and normalize to lowercase
+    choice = input_method(prompt).lower()  # Get user input and normalize to lowercase
     while choice not in ("y", "n"):  # Keep asking if invalid input is provided
-        choice = input_method(
-            f"You typed: {choice}, please enter only y or n: "
-        )
+        choice = input_method(f"You typed: {choice}, please enter only y or n: ")
     if choice == "y":
         return True
     elif choice == "n":
@@ -109,34 +87,13 @@ def ask_confirmation(
         return False
 
 
-def resource_path(relative_path):
-    """
-    Get the absolute path to a resource, accounting for PyInstaller packaging.
-
-    Args:
-        relative_path (str): The relative path to the resource.
-
-    Returns:
-        str: The absolute path to the resource.
-    """
-    try:
-        # PyInstaller sets the path to the bundled files in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(
-            "."
-        )  # Default to current working directory if not using PyInstaller
-    return os.path.join(base_path, relative_path)
-
-
-def ssh_connect(host, usr, pswd):
+def ssh_connect(host, usr):
     """
     Establish an SSH connection to a remote host.
 
     Args:
         host (str): The hostname or IP address of the remote server.
         usr (str): The username for authentication.
-        pswd (str): The password for authentication.
 
     Returns:
         SSHClient: An SSH client instance connected to the remote host.
@@ -146,17 +103,22 @@ def ssh_connect(host, usr, pswd):
         Exception: For other connection issues.
     """
     client = SSHClient()
-    host_file = resource_path("known_hosts")  # Path to known hosts file
-    client.load_host_keys(host_file)  # Load known hosts to verify the server
-    try:
-        # Attempt to connect using provided credentials
-        client.connect(hostname=host, username=usr, password=pswd, timeout=2)
-    except AuthenticationException:
-        print("Authentication failed. Please check your credentials.")
-        sys.exit(1)  # Exit if authentication fails
-    except Exception as e:
-        print(f"Connection error: {e}")
-        sys.exit(1)  # Exit if connection fails
+    client.set_missing_host_key_policy(AutoAddPolicy())
+    while True:
+        pswd = getpass(f"Please enter {usr} password: ")
+        try:
+            # Attempt to connect using provided credentials
+            client.connect(hostname=host, username=usr, password=pswd, timeout=2)
+            break
+        except AuthenticationException:
+            print("Authentication failed. Please try again.")
+        except TimeoutError:
+            print("Connection timed out. Try again.")
+        except Exception as e:
+            print(f"Connection error: {e}")
+            retry = input("Would you care to try again? (y/n)").strip().lower()
+            if retry != "y":
+                sys.exit(1)  # Exit if connection fails
     return client
 
 
@@ -217,24 +179,11 @@ def main():
     mrrc_server = "shred.med.yale.edu"
     m_user = "petlab"
 
-    # Load configuration settings, such as petlab password
-    config = load_config()
-    if config is None:
-        m_pswd = getpass(
-            "Please enter petlab password: "
-        )  # Prompt for password if config is not found
-    else:
-        m_pswd = config.get(
-            "petlab_password"
-        )  # Retrieve password from config file
-
-    client = ssh_connect(
-        mrrc_server, m_user, m_pswd
-    )  # Establish SSH connection
+    client = ssh_connect(mrrc_server, m_user)  # Establish SSH connection
 
     try:
         # Search for scans related to the PI and scanner
-        cmd = f'/home/rtc29/codes/FindMyStudy {scanner} {pi} | grep -i "{scanner}_[[:alnum:]]*_[[:alnum:]]*"'
+        cmd = f'/home/rtc29/Documents/codes/FindMyStudy.sh {scanner} {pi} | grep -i "{scanner}_[[:alnum:]]*_[[:alnum:]]*"'
         scans_list = ssh_command(client, cmd)
 
         if not scans_list:
