@@ -1,1 +1,0 @@
-pyinstaller /code/src/main.py --name mr_transfer --onefile
