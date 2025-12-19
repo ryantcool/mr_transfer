@@ -1,1 +1,1 @@
-pyinstaller --add-data "/home/pydev/mr_transfer/known_hosts:." main.py --name mr_transfer --onefile
+pyinstaller /code/src/main.py --name mr_transfer --onefile
