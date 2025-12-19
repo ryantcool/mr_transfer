@@ -1,0 +1,29 @@
+FROM rockylinux:8.5
+
+# Enable EPEL repo for extra packages
+RUN dnf install -y epel-release
+
+# Update and install packages
+RUN dnf update -y && \
+    dnf install -y \
+    python3.11 \
+    python3.11-pip \
+    python3.11-devel \
+    gcc \
+    make \
+    binutils \
+    patchelf \
+    git \
+    vim \
+    rsync \
+    curl \
+    ca-certificates && \
+    dnf clean all
+
+# Set working directory
+WORKDIR /code
+
+# Create data directory
+RUN mkdir -p /data8/data/
+
+CMD ["/bin/bash"]
